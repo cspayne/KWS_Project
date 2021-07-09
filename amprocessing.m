@@ -4,9 +4,8 @@ c2 = [1 .28 .84];
 c3 = [.78 0 .78];
 c4 = [.58 .01 .58];
 
-dataFolder = fullfile('Mini_DS');
-
 %set up ads
+dataFolder = fullfile('Mini_DS');
 ads = audioDatastore(fullfile(dataFolder), ...
     'IncludeSubfolders',true, ...
     'FileExtensions','.wav', ...
@@ -20,12 +19,16 @@ ads.Labels(isUnknown) = categorical("unknown");
 
 ads = subset(ads,isCommand|isUnknown);
 
+%variables
 fs = 16e3; % Known sample rate of the data set.
 ts = 1/fs;
 t = 0:ts:1-ts;
+y = logspace(2.3,3.903,5); %log-spaced frequency cutoffs between 200 and 8000 hz
 
-y = logspace(2.3,3.903,5); %log-spaced frequency cutoffs 
+x = read(ads);
+%sound(x, fs); %play audio file
 
+%filter design
 bpFilt1 = designfilt('bandpassfir','FilterOrder',20, ...
          'CutoffFrequency1',y(1), 'CutoffFrequency2',y(2), ...
          'SampleRate',fs);
@@ -43,14 +46,12 @@ bpFilt4 = designfilt('bandpassfir','FilterOrder',20, ...
          'SampleRate',fs);
 %fvtool(bpFilt4);
 
-x = read(ads);
-%sound(x, fs);
-
 xfilter1 = filter(bpFilt1,x);
 xfilter2 = filter(bpFilt2,x);
 xfilter3 = filter(bpFilt3,x);
 xfilter4 = filter(bpFilt4,x);
 
+%plot filtered bands
 %{
 figure
 subplot(4,1,1)
@@ -77,6 +78,7 @@ sgtitle('Contiguous Bands of Audio Signal')
 %}
 clear bpFilt1 bpFilt2 bpFilt3 bpFilt4;
 
+%envelope extraction
 h1 = hilbert(xfilter1);
 env1 = abs(h1);
 h2 = hilbert(xfilter2);
@@ -86,6 +88,7 @@ env3 = abs(h3);
 h4 = hilbert(xfilter4);
 env4 = abs(h4);
 
+%plot envelopes
 %{
 figure
 plot(t,xfilter1, 'color', c1)
@@ -123,29 +126,34 @@ clear xfilter1 xfilter2 xfilter3 xfilter4;
 clear h1 h2 h3 h4; 
 
 
-f1 = sqrt(y(2)*y(1)); 
+%modulation and synthesis of signals
+f1 = sqrt(y(2)*y(1)); %geometric mean to find center frequency
 signal1 = cos(2*pi*f1*t);
-add1 = env1*signal1;
+signal1 = signal1'; 
+add1 = env1.*signal1;
 
 f2 = sqrt(y(3)*y(2)); 
 signal2 = cos(2*pi*f1*t);
-add2 = env2*signal2;
+signal2 = signal2';
+add2 = env2.*signal2;
 
 f3 = sqrt(y(4)*y(3)); 
 signal3 = cos(2*pi*f1*t);
-add3 = env3*signal3;
+signal3 = signal3';
+add3 = env3.*signal3;
 
 f4 = sqrt(y(5)*y(4)); 
 signal4 = cos(2*pi*f1*t);
-add4 = env4*signal4;
+signal4 = signal4';
+add4 = env4.*signal4;
 
 finalsignal = add1 + add2 + add3 + add4; 
 clear add1 add2 add3 add4; 
 
+%plot final signal
 figure
-plot(t,finalsignal)
+plot(t,finalsignal, 'color', c4)
 title('Signal Synthesis')
 
 figure
 melSpectrogram(finalsignal, fs)
-

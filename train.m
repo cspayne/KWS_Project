@@ -9,9 +9,9 @@ commands = categorical(["up","down","one","two","three","four","five","six","sev
 isCommand = ismember(ads.Labels,commands);
 isUnknown = ~isCommand;
 
-includeFraction = 0.2;
-mask = rand(numel(ads.Labels),1) < includeFraction;
-isUnknown = isUnknown & mask;
+%includeFraction = 0.2;
+%mask = rand(numel(ads.Labels),1) < includeFraction;
+%isUnknown = isUnknown & mask;
 ads.Labels(isUnknown) = categorical("unknown");
 adsTrain = subset(ads,isCommand|isUnknown);
 
@@ -24,15 +24,15 @@ ads = audioDatastore(fullfile(dataFolder, 'Validation'), ...
 isCommand = ismember(ads.Labels,commands);
 isUnknown = ~isCommand;
 
-includeFraction = 0.2;
-mask = rand(numel(ads.Labels),1) < includeFraction;
-isUnknown = isUnknown & mask;
+%includeFraction = 0.2;
+%mask = rand(numel(ads.Labels),1) < includeFraction;
+%isUnknown = isUnknown & mask;
 ads.Labels(isUnknown) = categorical("unknown");
 
 adsValidation = subset(ads,isCommand|isUnknown);
 
 %reduce dataset?
-reduceDataset = true;
+reduceDataset = false;
 if reduceDataset
     numUniqueLabels = numel(unique(adsTrain.Labels));
     % Reduce the dataset by a factor of 20
@@ -125,6 +125,7 @@ options = trainingOptions('adam', ...
     'LearnRateDropPeriod',20);
 
 trainedNet = trainNetwork(xTrain,yTrain,layers,options);
+save trainedNet
 
 %Evaluate Data
 yValPred = classify(trainedNet,xValidation);
@@ -148,10 +149,4 @@ cm.ColumnSummary = 'column-normalized';
 cm.RowSummary = 'row-normalized';
 sortClasses(cm, [commands,"unknown"])
 
-figure('Units','normalized','Position',[0.2 0.2 0.5 0.5]);
-cm = confusionchart(yValidation,yValPred);
-cm.Title = 'Confusion Matrix for Validation Data';
-cm.ColumnSummary = 'column-normalized';
-cm.RowSummary = 'row-normalized';
-sortClasses(cm, [commands,"unknown"])
 

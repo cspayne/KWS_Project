@@ -9,9 +9,9 @@ commands = categorical(["up","down","one","two","three","four","five","six","sev
 isCommand = ismember(ads.Labels,commands);
 isUnknown = ~isCommand;
 
-%includeFraction = 0.2;
-%mask = rand(numel(ads.Labels),1) < includeFraction;
-%isUnknown = isUnknown & mask;
+includeFraction = 0.2;
+mask = rand(numel(ads.Labels),1) < includeFraction;
+isUnknown = isUnknown & mask;
 ads.Labels(isUnknown) = categorical("unknown");
 adsTrain = subset(ads,isCommand|isUnknown);
 
@@ -24,9 +24,9 @@ ads = audioDatastore(fullfile(dataFolder, 'Validation'), ...
 isCommand = ismember(ads.Labels,commands);
 isUnknown = ~isCommand;
 
-%includeFraction = 0.2;
-%mask = rand(numel(ads.Labels),1) < includeFraction;
-%isUnknown = isUnknown & mask;
+includeFraction = 0.2;
+mask = rand(numel(ads.Labels),1) < includeFraction;
+isUnknown = isUnknown & mask;
 ads.Labels(isUnknown) = categorical("unknown");
 
 adsValidation = subset(ads,isCommand|isUnknown);
@@ -79,15 +79,18 @@ reset(adsTrain);
 for i = 1:numTrain
     x = read(adsTrain); 
     xPadded = [zeros(floor((segmentSamples-size(x,1))/2),1);x;zeros(ceil((segmentSamples-size(x,1))/2),1)];
-    xTrain(:,:,:,i) = extract(afe,xPadded); 
+    xAM = AM_Processing(xPadded,fs); 
+    xTrain(:,:,:,i) = extract(afe,xAM); 
 end
 epsil = 1e-6;
 xTrain = log10(xTrain + epsil);
 numValidation = length(adsValidation.Files);
+xValidation = zeros(numHops,numBands,1,numTrain);
 for ii = 1:numValidation
     x = read(adsValidation); 
     xPadded = [zeros(floor((segmentSamples-size(x,1))/2),1);x;zeros(ceil((segmentSamples-size(x,1))/2),1)];
-    xValidation(:,:,:,ii) = extract(afe,xPadded); 
+    xAM = AM_Processing(xPadded,fs); 
+    xValidation(:,:,:,ii) = extract(afe,xAM); 
 end
 
 xValidation = log10(xValidation + epsil);

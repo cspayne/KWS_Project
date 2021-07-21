@@ -32,7 +32,7 @@ ads.Labels(isUnknown) = categorical("unknown");
 adsValidation = subset(ads,isCommand|isUnknown);
 
 %reduce dataset?
-reduceDataset = false;
+reduceDataset = true;
 if reduceDataset
     numUniqueLabels = numel(unique(adsTrain.Labels));
     % Reduce the dataset by a factor of 20
@@ -81,7 +81,8 @@ for i = 1:numTrain
     xPadded = [zeros(floor((segmentSamples-size(x,1))/2),1);x;zeros(ceil((segmentSamples-size(x,1))/2),1)];
     xTrain(:,:,:,i) = extract(afe,xPadded); 
 end
-
+epsil = 1e-6;
+xTrain = log10(xTrain + epsil);
 numValidation = length(adsValidation.Files);
 for ii = 1:numValidation
     x = read(adsValidation); 
@@ -89,16 +90,19 @@ for ii = 1:numValidation
     xValidation(:,:,:,ii) = extract(afe,xPadded); 
 end
 
+xValidation = log10(xValidation + epsil);
 yTrain = removecats(adsTrain.Labels);
 yValidation = removecats(adsValidation.Labels);
 
 %CNN setup
 
-numClasses = numel(categories(yTrain));
 
+classWeights = 1./countcats(yTrain);
+classWeights = classWeights'/mean(classWeights);
+numClasses = numel(categories(yTrain));
+classes = (categories(yTrain));
 layers = [
     imageInputLayer([numHops numBands])
-    
     convolution2dLayer([3 3],32,"Name","conv_1","Padding","same")
     batchNormalizationLayer
     reluLayer
@@ -110,9 +114,10 @@ layers = [
     convolution2dLayer([3 3],32,"Name","conv_3","Padding","same")
     batchNormalizationLayer
     reluLayer("Name","relu_3")
+    dropoutLayer
     fullyConnectedLayer(numClasses)
     softmaxLayer
-    classificationLayer];
+    classificationLayer('Classes',classes,'ClassWeights',classWeights)];
 
 %Train 
 miniBatchSize = 128;
@@ -123,13 +128,16 @@ options = trainingOptions('adam', ...
     'MiniBatchSize',miniBatchSize, ...
     'Shuffle','every-epoch', ...
     'Plots','training-progress', ...
-    'Verbose',false, ...
+    'Verbose',false, ... 
+    'ValidationData',{xValidation,yValidation}, ...
+    'ValidationFrequency',validationFrequency, ...
     'LearnRateSchedule','piecewise', ...
     'LearnRateDropFactor',0.1, ...
     'LearnRateDropPeriod',20);
 
 trainedNet = trainNetwork(xTrain,yTrain,layers,options);
 save trainedNet
+
 
 %Evaluate Data
 yValPred = classify(trainedNet,xValidation);

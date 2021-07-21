@@ -85,7 +85,7 @@ end
 epsil = 1e-6;
 xTrain = log10(xTrain + epsil);
 numValidation = length(adsValidation.Files);
-xValidation = zeros(numHops,numBands,1,numTrain);
+xValidation = zeros(numHops,numBands,1,numValidation);
 for ii = 1:numValidation
     x = read(adsValidation); 
     xPadded = [zeros(floor((segmentSamples-size(x,1))/2),1);x;zeros(ceil((segmentSamples-size(x,1))/2),1)];
